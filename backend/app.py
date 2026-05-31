@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, make_response
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from extensions import mongo, mail
@@ -10,8 +10,23 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # The official, native way to open up wildcard access and support OPTIONS pre-flights securely
-    CORS(app, resources={r"/api/*": {"origins": "*", "allow_headers": ["Content-Type", "Authorization"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
+    # Global, absolute wildcard configuration covering all methods and matching pre-flight options headers
+    CORS(app, resources={r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Origin"]
+    }})
+
+    # Explicit global hook to catch and return 200 OK for any pre-flight browser OPTIONS requests
+    @app.before_request
+    def handle_preflight():
+        from flask import request
+        if request.method == "OPTIONS":
+            response = make_response()
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            return response, 200
 
     JWTManager(app)
     mongo.init_app(app)
