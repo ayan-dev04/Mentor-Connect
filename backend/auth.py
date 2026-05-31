@@ -1,19 +1,31 @@
 import random
 import string
+import threading  # Threading engine to run emails in the background
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message
 from extensions import mongo, mail
-from flask_cors import CORS  # Imported for blueprint level access
+from flask_cors import CORS
 
 auth_bp = Blueprint('auth', __name__)
-# Force explicit cross-origin permissions specifically on all authentication endpoints
 CORS(auth_bp, resources={r"/*": {"origins": "*"}})
+
 
 def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
+
+
+# Background thread worker function for emails
+def send_async_email(app, msg):
+    with app.app_context():
+        try:
+            mail.send(msg)
+            print("[EMAIL] Background email sent successfully.")
+        except Exception as e:
+            print(f"[EMAIL] Background email failed: {e}")
+
 
 def send_otp_email(email, otp):
     msg = Message(
@@ -21,32 +33,36 @@ def send_otp_email(email, otp):
         recipients=[email],
         body=f"Hello,\n\nYour OTP for account verification is: {otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nMentorConnect Team"
     )
-    mail.send(msg)
+    # Get the active Flask context object to pass into the new thread safely
+    app = current_app._get_current_object()
+
+    # Spin up an independent thread to send the email without blocking the server
+    threading.Thread(target=send_async_email, args=(app, msg)).start()
+
 
 def send_welcome_email(email, name, role):
-    try:
-        msg = Message(
-            subject=f"Welcome to MentorConnect, {name}!",
-            recipients=[email],
-            sender="mentorconnect.project18@gmail.com",
-            html=f"""
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"><title>Welcome</title></head>
-            <body style="font-family: Arial, sans-serif;">
-                <h2>Welcome to MentorConnect!</h2>
-                <p>Hello <strong>{name}</strong>,</p>
-                <p>Your account has been successfully created as a <strong>{role}</strong>.</p>
-                <p>You can now log in and start your mentorship journey.</p>
-                <p>Best regards,<br>MentorConnect Team</p>
-            </body>
-            </html>
-            """
-        )
-        mail.send(msg)
-        print(f"[EMAIL] Welcome email sent to {email}")
-    except Exception as e:
-        print(f"[EMAIL] Welcome email error: {e}")
+    """Send a welcome email after account creation."""
+    msg = Message(
+        subject=f"Welcome to MentorConnect, {name}!",
+        recipients=[email],
+        sender="mentorconnect.project18@gmail.com",
+        html=f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>Welcome</title></head>
+        <body style="font-family: Arial, sans-serif;">
+            <h2>Welcome to MentorConnect!</h2>
+            <p>Hello <strong>{name}</strong>,</p>
+            <p>Your account has been successfully created as a <strong>{role}</strong>.</p>
+            <p>You can now log in and start your mentorship journey.</p>
+            <p>Best regards,<br>MentorConnect Team</p>
+        </body>
+        </html>
+        """
+    )
+    app = current_app._get_current_object()
+    threading.Thread(target=send_async_email, args=(app, msg)).start()
+
 
 @auth_bp.route('/send-otp', methods=['POST'])
 def send_otp():
@@ -66,14 +82,13 @@ def send_otp():
     if mongo.db.users.find_one({'email': email}):
         return jsonify({'error': 'Email already registered'}), 400
 
+    # Clean up previous entries
     mongo.db.email_verifications.delete_many({'email': email, 'is_verified': False})
 
     otp = generate_otp()
-    try:
-        send_otp_email(email, otp)
-    except Exception as e:
-        print(f"OTP email error: {e}")
-        return jsonify({'error': 'Failed to send OTP email'}), 500
+
+    # Triggers background email thread instantly
+    send_otp_email(email, otp)
 
     hashed = generate_password_hash(password)
     verification_doc = {
@@ -91,6 +106,7 @@ def send_otp():
     }
     mongo.db.email_verifications.insert_one(verification_doc)
     return jsonify({'message': 'OTP sent'}), 200
+
 
 @auth_bp.route('/verify-otp', methods=['POST'])
 def verify_otp():
@@ -131,6 +147,7 @@ def verify_otp():
         {'$set': {'is_verified': True}}
     )
 
+    # Triggers background welcome email thread instantly
     send_welcome_email(user_doc['email'], user_doc['name'], user_doc['role'])
 
     access_token = create_access_token(
@@ -150,6 +167,7 @@ def verify_otp():
             'profile_pic': user_doc.get('profile_pic')
         }
     }), 201
+
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

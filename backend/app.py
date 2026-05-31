@@ -10,7 +10,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Official way to enable global CORS and support standard HTTP methods
+    # Enable global CORS to support standard dynamic HTTP request methods
     CORS(app, resources={r"/api/*": {
         "origins": "*",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],

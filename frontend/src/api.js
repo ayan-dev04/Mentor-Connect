@@ -1,4 +1,5 @@
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://mentor-connect-backend-7djl.onrender.com/api';
+// Production cloud network address
+const API_BASE = 'https://mentor-connect-backend-7djl.onrender.com/api';
 
 function getToken() {
   return localStorage.getItem('token');
