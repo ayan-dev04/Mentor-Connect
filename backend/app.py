@@ -6,10 +6,14 @@ from config import Config
 from auth import auth_bp
 from routes import mentors_bp, bookings_bp, feedback_bp, profile_bp, admin_bp, availability_bp
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    CORS(app)
+
+    app.config['CORS_HEADERS'] = 'Content-Type'
+    CORS(app, supports_credentials=True, origins="*")
+
     JWTManager(app)
     mongo.init_app(app)
     mail.init_app(app)
@@ -27,6 +31,7 @@ def create_app():
         return jsonify({'status': 'ok'})
 
     return app
+
 
 if __name__ == '__main__':
     app = create_app()
