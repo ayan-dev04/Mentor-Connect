@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, make_response
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from extensions import mongo, mail
@@ -10,28 +10,18 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Global, absolute wildcard configuration covering all methods and matching pre-flight options headers
+    # Official way to enable global CORS and support standard HTTP methods
     CORS(app, resources={r"/api/*": {
         "origins": "*",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Origin"]
+        "allow_headers": ["Content-Type", "Authorization"]
     }})
-
-    # Explicit global hook to catch and return 200 OK for any pre-flight browser OPTIONS requests
-    @app.before_request
-    def handle_preflight():
-        from flask import request
-        if request.method == "OPTIONS":
-            response = make_response()
-            response.headers.add("Access-Control-Allow-Origin", "*")
-            response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-            response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-            return response, 200
 
     JWTManager(app)
     mongo.init_app(app)
     mail.init_app(app)
 
+    # Blueprint Registrations
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(mentors_bp, url_prefix='/api/mentors')
     app.register_blueprint(bookings_bp, url_prefix='/api/bookings')

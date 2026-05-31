@@ -6,8 +6,11 @@ from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message
 from extensions import mongo, mail
+from flask_cors import CORS  # Imported for blueprint level access
 
 auth_bp = Blueprint('auth', __name__)
+# Force explicit cross-origin permissions specifically on all authentication endpoints
+CORS(auth_bp, resources={r"/*": {"origins": "*"}})
 
 def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
@@ -21,7 +24,6 @@ def send_otp_email(email, otp):
     mail.send(msg)
 
 def send_welcome_email(email, name, role):
-    """Send a welcome email after account creation."""
     try:
         msg = Message(
             subject=f"Welcome to MentorConnect, {name}!",
@@ -64,7 +66,6 @@ def send_otp():
     if mongo.db.users.find_one({'email': email}):
         return jsonify({'error': 'Email already registered'}), 400
 
-    # Delete any previous unverified OTPs for this email
     mongo.db.email_verifications.delete_many({'email': email, 'is_verified': False})
 
     otp = generate_otp()
@@ -109,7 +110,6 @@ def verify_otp():
         mongo.db.email_verifications.delete_one({'_id': verification['_id']})
         return jsonify({'error': 'OTP expired'}), 400
 
-    # Create user account
     user_doc = {
         'email': verification['email'],
         'name': verification['name'],
@@ -131,10 +131,8 @@ def verify_otp():
         {'$set': {'is_verified': True}}
     )
 
-    # Send welcome email
     send_welcome_email(user_doc['email'], user_doc['name'], user_doc['role'])
 
-    # Create JWT token
     access_token = create_access_token(
         identity=str(result.inserted_id),
         additional_claims={'role': user_doc['role']}

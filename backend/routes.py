@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from extensions import mongo, mail
 from flask_mail import Message
+from flask_cors import CORS # Imported for route safety
 
 mentors_bp = Blueprint('mentors', __name__)
 bookings_bp = Blueprint('bookings', __name__)
@@ -12,8 +13,14 @@ profile_bp = Blueprint('profile', __name__)
 admin_bp = Blueprint('admin', __name__)
 availability_bp = Blueprint('availability', __name__)
 
+# Enforce secure wildcard cross-origin permissions on all blueprints down the stream
+CORS(mentors_bp, resources={r"/*": {"origins": "*"}})
+CORS(bookings_bp, resources={r"/*": {"origins": "*"}})
+CORS(feedback_bp, resources={r"/*": {"origins": "*"}})
+CORS(profile_bp, resources={r"/*": {"origins": "*"}})
+CORS(admin_bp, resources={r"/*": {"origins": "*"}})
+CORS(availability_bp, resources={r"/*": {"origins": "*"}})
 
-# ---------- EMAIL HELPER (SYNCHRONOUS) ----------
 def send_booking_emails(student_email, student_name, mentor_email, mentor_name, slot_str):
     print(f"\n[BOOKING EMAIL] Student: {student_email} ({student_name})")
     print(f"[BOOKING EMAIL] Mentor:  {mentor_email} ({mentor_name})")
@@ -21,7 +28,6 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
 
     from_email = "mentorconnect.project18@gmail.com"
 
-    # Base HTML template
     html_template = """
     <!DOCTYPE html>
     <html>
@@ -36,12 +42,10 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
     </html>
     """
 
-    # Correctly substitute strings using Python's standard .format() method
     student_html = html_template.format(name=student_name, other_name=mentor_name, slot=slot_str)
     mentor_html = html_template.format(name=mentor_name, other_name=student_name, slot=slot_str)
 
     try:
-        # Student email
         msg_student = Message(
             subject=f"Session Confirmation with {mentor_name}",
             recipients=[student_email],
@@ -51,7 +55,6 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
         mail.send(msg_student)
         print(f"[BOOKING EMAIL] ✅ Student email sent to {student_email}")
 
-        # Mentor email (only if different from student)
         if student_email != mentor_email:
             msg_mentor = Message(
                 subject=f"New Session: {student_name} booked with you",
@@ -66,9 +69,6 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
 
     except Exception as e:
         print(f"[BOOKING EMAIL] ❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-
 
 # ---------- MENTORS ----------
 @mentors_bp.route('', methods=['GET'])
@@ -91,7 +91,6 @@ def get_mentors():
         })
     return jsonify(result)
 
-
 @mentors_bp.route('/<mentor_id>', methods=['GET'])
 def get_mentor(mentor_id):
     if not ObjectId.is_valid(mentor_id):
@@ -112,7 +111,6 @@ def get_mentor(mentor_id):
         "profile_pic": mentor.get("profile_pic"),
         "availableSlots": [{"id": str(s["_id"]), "slot": s["slot"].isoformat()} for s in slots]
     })
-
 
 # ---------- BOOKINGS ----------
 @bookings_bp.route('', methods=['POST'])
@@ -154,7 +152,6 @@ def create_booking():
         result = mongo.db.bookings.insert_one(booking)
         mongo.db.availability_slots.update_one({"_id": avail["_id"]}, {"$set": {"is_booked": True}})
 
-        # Send emails synchronously (no threading, works without context errors)
         send_booking_emails(
             student_email=student['email'],
             student_name=student['name'],
@@ -169,7 +166,6 @@ def create_booking():
         print(f"Booking error: {e}")
         return jsonify({"error": str(e)}), 500
 
-
 @bookings_bp.route('/student', methods=['GET'])
 @jwt_required()
 def get_student_bookings():
@@ -183,7 +179,6 @@ def get_student_bookings():
         "created_at": b["created_at"].isoformat()
     } for b in bookings_cursor])
 
-
 @bookings_bp.route('/mentor', methods=['GET'])
 @jwt_required()
 def get_mentor_bookings():
@@ -196,7 +191,6 @@ def get_mentor_bookings():
         "status": b["status"],
         "created_at": b["created_at"].isoformat()
     } for b in bookings_cursor])
-
 
 @bookings_bp.route('/<booking_id>/cancel', methods=['PUT'])
 @jwt_required()
@@ -214,7 +208,6 @@ def cancel_booking(booking_id):
     )
     return jsonify({"message": "Booking cancelled"})
 
-
 @bookings_bp.route('/<booking_id>/complete', methods=['PUT'])
 @jwt_required()
 def complete_booking(booking_id):
@@ -229,15 +222,13 @@ def complete_booking(booking_id):
     mongo.db.bookings.update_one({"_id": ObjectId(booking_id)}, {"$set": {"status": "completed"}})
     return jsonify({"message": "Session completed"})
 
-
-# ---------- TEST TOKEN ENDPOINT  ----------
+# ---------- TEST TOKEN ENDPOINT ----------
 @bookings_bp.route('/test-token', methods=['GET'])
 @jwt_required()
 def test_token():
     user_id = get_jwt_identity()
     role = get_jwt().get('role')
     return jsonify({"user_id": user_id, "role": role})
-
 
 # ---------- FEEDBACK ----------
 @feedback_bp.route('', methods=['POST'])
@@ -264,7 +255,6 @@ def add_feedback():
         "created_at": datetime.utcnow()
     })
 
-    # Update mentor's average rating
     mentor_id = booking["mentor_id"]
     all_feedback = list(mongo.db.feedback.aggregate([
         {"$lookup": {"from": "bookings", "localField": "booking_id", "foreignField": "_id", "as": "booking"}},
@@ -276,7 +266,6 @@ def add_feedback():
         mongo.db.users.update_one({"_id": mentor_id}, {"$set": {"rating": round(avg, 1), "reviews": len(all_feedback)}})
 
     return jsonify({"message": "Feedback added"})
-
 
 # ---------- PROFILE ----------
 @profile_bp.route('', methods=['GET'])
@@ -299,7 +288,6 @@ def get_profile():
         "experience_years": user.get("experience_years")
     })
 
-
 @profile_bp.route('', methods=['PUT'])
 @jwt_required()
 def update_profile():
@@ -311,7 +299,6 @@ def update_profile():
         mongo.db.users.update_one({"_id": ObjectId(current_user_id)}, {"$set": update_data})
     return jsonify({"message": "Profile updated"})
 
-
 # ---------- ADMIN ----------
 @admin_bp.route('/students', methods=['GET'])
 @jwt_required()
@@ -320,7 +307,6 @@ def get_students():
         return jsonify({"error": "Admin access required"}), 403
     students_cursor = mongo.db.users.find({"role": "student"})
     return jsonify([{"id": str(s["_id"]), "name": s["name"], "email": s["email"]} for s in students_cursor])
-
 
 @admin_bp.route('/feedback', methods=['GET'])
 @jwt_required()
@@ -335,7 +321,6 @@ def get_all_feedback():
         "comment": f["comment"],
         "created_at": f["created_at"].isoformat()
     } for f in feedback_cursor])
-
 
 # ---------- AVAILABILITY ----------
 @availability_bp.route('', methods=['POST'])
@@ -358,7 +343,6 @@ def add_availability():
         "is_booked": False
     })
     return jsonify({"message": "Availability slot added"})
-
 
 @availability_bp.route('/<path:slot_str>', methods=['DELETE'])
 @jwt_required()
