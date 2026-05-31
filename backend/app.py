@@ -9,7 +9,10 @@ from routes import mentors_bp, bookings_bp, feedback_bp, profile_bp, admin_bp, a
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    CORS(app)
+    CORS(app, origins=[
+        "https://mentor-connect-frontend-oq49.onrender.com",
+        "http://localhost:3000"
+    ])
     JWTManager(app)
     mongo.init_app(app)
     mail.init_app(app)
