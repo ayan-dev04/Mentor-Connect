@@ -6,13 +6,29 @@ from config import Config
 from auth import auth_bp
 from routes import mentors_bp, bookings_bp, feedback_bp, profile_bp, admin_bp, availability_bp
 
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    app.config['CORS_HEADERS'] = 'Content-Type'
-    CORS(app, supports_credentials=True, origins="*")
+    CORS(app)
+
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        return response
+
+    @app.before_request
+    def handle_options():
+        from flask import request
+        if request.method == 'OPTIONS':
+            from flask import Response
+            response = Response()
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            return response
 
     JWTManager(app)
     mongo.init_app(app)
@@ -31,7 +47,6 @@ def create_app():
         return jsonify({'status': 'ok'})
 
     return app
-
 
 if __name__ == '__main__':
     app = create_app()
