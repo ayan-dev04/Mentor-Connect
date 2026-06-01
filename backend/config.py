@@ -1,4 +1,5 @@
 import os
+import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -10,6 +11,10 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
     MONGO_URI = os.getenv('MONGO_URI')
+    
+    # Extend JWT token expiration to 30 days to prevent 401 errors during evaluations
+    JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(days=30)
+
 
     # Email configuration (Strict rules for Google SMTP Port 587)
     MAIL_SERVER = 'smtp.gmail.com'
