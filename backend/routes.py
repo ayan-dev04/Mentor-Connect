@@ -4,7 +4,6 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from extensions import mongo, mail
 from flask_mail import Message
-from flask_cors import CORS
 import threading
 
 mentors_bp = Blueprint('mentors', __name__)
@@ -13,14 +12,6 @@ feedback_bp = Blueprint('feedback', __name__)
 profile_bp = Blueprint('profile', __name__)
 admin_bp = Blueprint('admin', __name__)
 availability_bp = Blueprint('availability', __name__)
-
-# Enforce secure wildcard cross-origin permissions on all secondary blueprints
-CORS(mentors_bp, resources={r"/*": {"origins": "*"}})
-CORS(bookings_bp, resources={r"/*": {"origins": "*"}})
-CORS(feedback_bp, resources={r"/*": {"origins": "*"}})
-CORS(profile_bp, resources={r"/*": {"origins": "*"}})
-CORS(admin_bp, resources={r"/*": {"origins": "*"}})
-CORS(availability_bp, resources={r"/*": {"origins": "*"}})
 
 def send_async_email(app, msg):
     with app.app_context():

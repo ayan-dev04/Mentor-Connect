@@ -7,10 +7,8 @@ from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message
 from extensions import mongo, mail
-from flask_cors import CORS
 
 auth_bp = Blueprint('auth', __name__)
-CORS(auth_bp, resources={r"/*": {"origins": "*"}})
 
 
 def generate_otp():
