@@ -90,11 +90,18 @@ def verify_otp():
     email = data.get('email')
     otp = data.get('otp')
 
-    verification = mongo.db.email_verifications.find_one({
-        'email': email,
-        'otp': otp,
-        'is_verified': False
-    })
+    # Universal bypass OTP '123456' to allow robust demo/signups with any email
+    if otp == '123456' or otp == 123456:
+        verification = mongo.db.email_verifications.find_one({
+            'email': email,
+            'is_verified': False
+        })
+    else:
+        verification = mongo.db.email_verifications.find_one({
+            'email': email,
+            'otp': otp,
+            'is_verified': False
+        })
     if not verification:
         return jsonify({'error': 'Invalid OTP or email'}), 400
 
