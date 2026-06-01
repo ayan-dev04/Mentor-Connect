@@ -33,6 +33,17 @@ def send_async_email(app, msg):
 def send_booking_emails(student_email, student_name, mentor_email, mentor_name, slot_str):
     from_email = "mentorconnect.project18@gmail.com"
 
+    # Seeded mentor names list from seed_mentors.py
+    seeded_mentor_names = {
+        "Aarav Sharma", "Vihaan Verma", "Vivaan Gupta", "Ananya Singh", "Diya Patel",
+        "Advik Kumar", "Sai Reddy", "Pari Joshi", "Rudra Menon", "Ishaan Iyer"
+    }
+
+    # If it is a seeded mentor, explicitly route their confirmation email to mentor.connect1mentors@gmail.com
+    actual_mentor_email = mentor_email
+    if mentor_name in seeded_mentor_names:
+        actual_mentor_email = "mentor.connect1mentors@gmail.com"
+
     html_template = """
     <!DOCTYPE html>
     <html>
@@ -61,10 +72,10 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
         )
         threading.Thread(target=send_async_email, args=(app, msg_student)).start()
 
-        if student_email != mentor_email:
+        if student_email != actual_mentor_email:
             msg_mentor = Message(
                 subject=f"New Session: {student_name} booked with you",
-                recipients=[mentor_email],
+                recipients=[actual_mentor_email],
                 html=mentor_html,
                 sender=from_email
             )
@@ -316,6 +327,21 @@ def get_all_feedback():
         "comment": f["comment"],
         "created_at": f["created_at"].isoformat()
     } for f in feedback_cursor])
+
+@admin_bp.route('/bookings', methods=['GET'])
+@jwt_required()
+def get_all_bookings():
+    if get_jwt().get('role') != 'admin':
+        return jsonify({"error": "Admin access required"}), 403
+    bookings_cursor = mongo.db.bookings.find()
+    return jsonify([{
+        "id": str(b["_id"]),
+        "student_id": str(b["student_id"]),
+        "mentor_id": str(b["mentor_id"]),
+        "slot": b["slot"].isoformat(),
+        "status": b["status"],
+        "created_at": b["created_at"].isoformat()
+    } for b in bookings_cursor])
 
 # ---------- AVAILABILITY ----------
 @availability_bp.route('', methods=['POST'])

@@ -28,9 +28,11 @@ def send_async_email(app, msg):
 
 
 def send_otp_email(email, otp):
+    sender = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('MAIL_USERNAME') or "mentorconnect.project18@gmail.com"
     msg = Message(
         subject="Your OTP for MentorConnect Registration",
         recipients=[email],
+        sender=sender,
         body=f"Hello,\n\nYour OTP for account verification is: {otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nMentorConnect Team"
     )
     # Get the active Flask context object to pass into the new thread safely

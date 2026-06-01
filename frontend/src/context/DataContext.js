@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 
 const DataContext = createContext();
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://mentor-connect-backend-7djl.onrender.com';
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://mentor-connect-backend-7djl.onrender.com/api';
 
 export const useData = () => useContext(DataContext);
 
@@ -72,6 +72,7 @@ export const DataProvider = ({ children }) => {
       let endpoint = '';
       if (user.role === 'student')     endpoint = '/bookings/student';
       else if (user.role === 'mentor') endpoint = '/bookings/mentor';
+      else if (user.role === 'admin')  endpoint = '/admin/bookings';
       else return;
       const data = await fetchWithAuth(endpoint);
       setBookings(data);
@@ -117,6 +118,7 @@ export const DataProvider = ({ children }) => {
       let endpoint = '';
       if (user.role === 'student')     endpoint = '/bookings/student';
       else if (user.role === 'mentor') endpoint = '/bookings/mentor';
+      else if (user.role === 'admin')  endpoint = '/admin/bookings';
       else return;
       const data = await fetchWithAuth(endpoint);
       setBookings(data);
@@ -143,6 +145,22 @@ export const DataProvider = ({ children }) => {
       console.error('Failed to refresh students:', err);
     }
   }, [user, fetchWithAuth]);
+
+  // ── Real-time Polling Effect (Updates dashboards in real-time every 5 seconds) ──
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      refreshBookings();
+      refreshMentors();
+      if (user.role === 'mentor' || user.role === 'admin') {
+        refreshStudents();
+      }
+      if (user.role === 'admin') {
+        fetchFeedback();
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [user, refreshBookings, refreshMentors, refreshStudents, fetchFeedback]);
 
   // ── Lookup helpers – improved with map and fallback ────────────────
   // Returns mentor object or a safe fallback (prevents "Loading…" forever)

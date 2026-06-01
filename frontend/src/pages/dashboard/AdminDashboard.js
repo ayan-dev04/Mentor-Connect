@@ -29,7 +29,7 @@ const AdminDashboard = () => {
     mentorSessionCount[b.mentor_id] = (mentorSessionCount[b.mentor_id] || 0) + 1;
   });
   const topMentors = Object.entries(mentorSessionCount)
-    .map(([id, count]) => ({ name: getMentorById(parseInt(id))?.name || 'Unknown', sessions: count }))
+    .map(([id, count]) => ({ name: getMentorById(id)?.name || 'Unknown', sessions: count }))
     .sort((a, b) => b.sessions - a.sessions)
     .slice(0, 5);
 

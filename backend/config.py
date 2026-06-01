@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Ensure robust .env loading relative to the config.py directory (essential for Gunicorn on Render)
+base_dir = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=base_dir / '.env')
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
