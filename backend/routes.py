@@ -61,8 +61,6 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
     student_html = html_template.format(name=student_name, other_name=mentor_name, slot=slot_str)
     mentor_html = html_template.format(name=mentor_name, other_name=student_name, slot=slot_str)
 
-    app = current_app._get_current_object()
-
     try:
         msg_student = Message(
             subject=f"Session Confirmation with {mentor_name}",
@@ -70,7 +68,8 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
             html=student_html,
             sender=from_email
         )
-        threading.Thread(target=send_async_email, args=(app, msg_student)).start()
+        mail.send(msg_student)
+        print("[EMAIL] Student session confirmation email sent successfully.")
 
         if student_email != actual_mentor_email:
             msg_mentor = Message(
@@ -79,7 +78,8 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
                 html=mentor_html,
                 sender=from_email
             )
-            threading.Thread(target=send_async_email, args=(app, msg_mentor)).start()
+            mail.send(msg_mentor)
+            print("[EMAIL] Mentor session confirmation email sent successfully.")
 
     except Exception as e:
         print(f"[BOOKING EMAIL EVENT ERROR]: {e}")

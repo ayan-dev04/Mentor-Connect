@@ -35,11 +35,11 @@ def send_otp_email(email, otp):
         sender=sender,
         body=f"Hello,\n\nYour OTP for account verification is: {otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nMentorConnect Team"
     )
-    # Get the active Flask context object to pass into the new thread safely
-    app = current_app._get_current_object()
-
-    # Spin up an independent thread to send the email without blocking the server
-    threading.Thread(target=send_async_email, args=(app, msg)).start()
+    try:
+        mail.send(msg)
+        print("[EMAIL] OTP email sent successfully.")
+    except Exception as e:
+        print(f"[EMAIL] OTP email failed: {e}")
 
 
 def send_welcome_email(email, name, role):
@@ -62,8 +62,11 @@ def send_welcome_email(email, name, role):
         </html>
         """
     )
-    app = current_app._get_current_object()
-    threading.Thread(target=send_async_email, args=(app, msg)).start()
+    try:
+        mail.send(msg)
+        print("[EMAIL] Welcome email sent successfully.")
+    except Exception as e:
+        print(f"[EMAIL] Welcome email failed: {e}")
 
 
 @auth_bp.route('/send-otp', methods=['POST'])
