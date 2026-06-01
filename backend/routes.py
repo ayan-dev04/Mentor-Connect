@@ -374,3 +374,30 @@ def remove_availability(slot_str):
     if result.deleted_count == 0:
         return jsonify({"error": "Slot not found or already booked"}), 404
     return jsonify({"message": "Availability slot removed"})
+
+import smtplib
+@mentors_bp.route('/test-smtp', methods=['GET'])
+def test_smtp():
+    results = {}
+    
+    # Test 587 (TLS)
+    try:
+        s = smtplib.SMTP('smtp.gmail.com', 587, timeout=5)
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+        results['port_587'] = 'Connected and STARTTLS succeeded!'
+        s.close()
+    except Exception as e:
+        results['port_587'] = f'Failed: {str(e)}'
+        
+    # Test 465 (SSL)
+    try:
+        s = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5)
+        s.ehlo()
+        results['port_465'] = 'Connected and SSL succeeded!'
+        s.close()
+    except Exception as e:
+        results['port_465'] = f'Failed: {str(e)}'
+        
+    return jsonify(results)
