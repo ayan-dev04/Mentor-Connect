@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from bson.objectid import ObjectId
 from datetime import datetime
 from extensions import mongo
-from email_service import send_email
+from email_service import send_email_async
 
 mentors_bp = Blueprint('mentors', __name__)
 bookings_bp = Blueprint('bookings', __name__)
@@ -43,7 +43,7 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
     mentor_html = html_template.format(name=mentor_name, other_name=student_name, slot=slot_str)
 
     # Send student email
-    send_email(
+    send_email_async(
         subject=f"Session Confirmation with {mentor_name}",
         recipients=student_email,
         html=student_html
@@ -51,11 +51,12 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
 
     # Send mentor email if different
     if student_email != actual_mentor_email:
-        send_email(
+        send_email_async(
             subject=f"New Session: {student_name} booked with you",
             recipients=actual_mentor_email,
             html=mentor_html
         )
+
 
 
 # ---------- MENTORS ----------

@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import mongo
-from email_service import send_email
+from email_service import send_email_async
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -17,7 +17,7 @@ def generate_otp():
 def send_otp_email(email, otp):
     subject = "Your OTP for MentorConnect Registration"
     body = f"Hello,\n\nYour OTP for account verification is: {otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nMentorConnect Team"
-    send_email(subject, email, body=body)
+    send_email_async(subject, email, body=body)
 
 
 def send_welcome_email(email, name, role):
@@ -36,7 +36,8 @@ def send_welcome_email(email, name, role):
     </body>
     </html>
     """
-    send_email(subject, email, html=html)
+    send_email_async(subject, email, html=html)
+
 
 
 

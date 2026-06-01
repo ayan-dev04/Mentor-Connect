@@ -68,3 +68,28 @@ def send_email(subject, recipients, body=None, html=None, sender=None):
     except Exception as e:
         print(f"[EMAIL] SMTP email failed: {e}")
         return False
+
+
+import threading
+
+def send_email_in_background(app, subject, recipients, body, html, sender):
+    with app.app_context():
+        try:
+            send_email(subject, recipients, body=body, html=html, sender=sender)
+        except Exception as e:
+            print(f"[EMAIL] Background send_email failed: {e}")
+
+def send_email_async(subject, recipients, body=None, html=None, sender=None):
+    """
+    Spawns a background thread to send the email asynchronously.
+    Guarantees that the main request returns instantly to prevent Gunicorn/CORS timeouts.
+    """
+    app = current_app._get_current_object()
+    thread = threading.Thread(
+        target=send_email_in_background,
+        args=(app, subject, recipients, body, html, sender)
+    )
+    thread.daemon = True
+    thread.start()
+    print(f"[EMAIL] Background thread successfully started for {recipients}.")
+
