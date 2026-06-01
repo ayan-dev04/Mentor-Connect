@@ -1,12 +1,11 @@
 import random
 import string
-import threading  # Threading engine to run emails in the background
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_mail import Message
-from extensions import mongo, mail
+from extensions import mongo
+from email_service import send_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -15,56 +14,30 @@ def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
 
 
-# Background thread worker function for emails
-def send_async_email(app, msg):
-    with app.app_context():
-        try:
-            mail.send(msg)
-            print("[EMAIL] Background email sent successfully.")
-        except Exception as e:
-            print(f"[EMAIL] Background email failed: {e}")
-
-
 def send_otp_email(email, otp):
-    sender = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('MAIL_USERNAME') or "mentorconnect.project18@gmail.com"
-    msg = Message(
-        subject="Your OTP for MentorConnect Registration",
-        recipients=[email],
-        sender=sender,
-        body=f"Hello,\n\nYour OTP for account verification is: {otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nMentorConnect Team"
-    )
-    try:
-        mail.send(msg)
-        print("[EMAIL] OTP email sent successfully.")
-    except Exception as e:
-        print(f"[EMAIL] OTP email failed: {e}")
+    subject = "Your OTP for MentorConnect Registration"
+    body = f"Hello,\n\nYour OTP for account verification is: {otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nMentorConnect Team"
+    send_email(subject, email, body=body)
 
 
 def send_welcome_email(email, name, role):
     """Send a welcome email after account creation."""
-    msg = Message(
-        subject=f"Welcome to MentorConnect, {name}!",
-        recipients=[email],
-        sender="mentorconnect.project18@gmail.com",
-        html=f"""
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="UTF-8"><title>Welcome</title></head>
-        <body style="font-family: Arial, sans-serif;">
-            <h2>Welcome to MentorConnect!</h2>
-            <p>Hello <strong>{name}</strong>,</p>
-            <p>Your account has been successfully created as a <strong>{role}</strong>.</p>
-            <p>You can now log in and start your mentorship journey.</p>
-            <p>Best regards,<br>MentorConnect Team</p>
-        </body>
-        </html>
-        """
-    )
-    try:
-        mail.send(msg)
-        print("[EMAIL] Welcome email sent successfully.")
-    except Exception as e:
-        print(f"[EMAIL] Welcome email failed: {e}")
+    subject = f"Welcome to MentorConnect, {name}!"
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><title>Welcome</title></head>
+    <body style="font-family: Arial, sans-serif;">
+        <h2>Welcome to MentorConnect!</h2>
+        <p>Hello <strong>{name}</strong>,</p>
+        <p>Your account has been successfully created as a <strong>{role}</strong>.</p>
+        <p>You can now log in and start your mentorship journey.</p>
+        <p>Best regards,<br>MentorConnect Team</p>
+    </body>
+    </html>
+    """
+    send_email(subject, email, html=html)
+
 
 
 @auth_bp.route('/send-otp', methods=['POST'])

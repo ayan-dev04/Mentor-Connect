@@ -2,9 +2,8 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from bson.objectid import ObjectId
 from datetime import datetime
-from extensions import mongo, mail
-from flask_mail import Message
-import threading
+from extensions import mongo
+from email_service import send_email
 
 mentors_bp = Blueprint('mentors', __name__)
 bookings_bp = Blueprint('bookings', __name__)
@@ -13,17 +12,8 @@ profile_bp = Blueprint('profile', __name__)
 admin_bp = Blueprint('admin', __name__)
 availability_bp = Blueprint('availability', __name__)
 
-def send_async_email(app, msg):
-    with app.app_context():
-        try:
-            mail.send(msg)
-            print("[EMAIL] Booking notification sent successfully in background.")
-        except Exception as e:
-            print(f"[EMAIL] Background booking notification failed: {e}")
 
 def send_booking_emails(student_email, student_name, mentor_email, mentor_name, slot_str):
-    from_email = "mentorconnect.project18@gmail.com"
-
     # Seeded mentor names list from seed_mentors.py
     seeded_mentor_names = {
         "Aarav Sharma", "Vihaan Verma", "Vivaan Gupta", "Ananya Singh", "Diya Patel",
@@ -52,28 +42,21 @@ def send_booking_emails(student_email, student_name, mentor_email, mentor_name, 
     student_html = html_template.format(name=student_name, other_name=mentor_name, slot=slot_str)
     mentor_html = html_template.format(name=mentor_name, other_name=student_name, slot=slot_str)
 
-    try:
-        msg_student = Message(
-            subject=f"Session Confirmation with {mentor_name}",
-            recipients=[student_email],
-            html=student_html,
-            sender=from_email
+    # Send student email
+    send_email(
+        subject=f"Session Confirmation with {mentor_name}",
+        recipients=student_email,
+        html=student_html
+    )
+
+    # Send mentor email if different
+    if student_email != actual_mentor_email:
+        send_email(
+            subject=f"New Session: {student_name} booked with you",
+            recipients=actual_mentor_email,
+            html=mentor_html
         )
-        mail.send(msg_student)
-        print("[EMAIL] Student session confirmation email sent successfully.")
 
-        if student_email != actual_mentor_email:
-            msg_mentor = Message(
-                subject=f"New Session: {student_name} booked with you",
-                recipients=[actual_mentor_email],
-                html=mentor_html,
-                sender=from_email
-            )
-            mail.send(msg_mentor)
-            print("[EMAIL] Mentor session confirmation email sent successfully.")
-
-    except Exception as e:
-        print(f"[BOOKING EMAIL EVENT ERROR]: {e}")
 
 # ---------- MENTORS ----------
 @mentors_bp.route('', methods=['GET'])
