@@ -7,10 +7,12 @@ from extensions import mail
 def send_email(subject, recipients, body=None, html=None, sender=None):
     """
     Robust centralized email sending function.
-    If RESEND_API_KEY is configured in the environment, sends via Resend's HTTPS API
-    (which works on Render's free tier where SMTP port 587/465 is blocked).
+    If BREVO_API_KEY is configured in the environment, sends via Brevo's HTTPS API
+    (which allows sending up to 300 free emails per day to ANY recipient without a custom domain).
+    If RESEND_API_KEY is configured in the environment, sends via Resend's HTTPS API.
     Otherwise, falls back to Flask-Mail SMTP.
     """
+    brevo_key = os.getenv('BREVO_API_KEY')
     resend_key = os.getenv('RESEND_API_KEY')
     
     # Ensure recipients is a list of strings
@@ -19,7 +21,40 @@ def send_email(subject, recipients, body=None, html=None, sender=None):
     else:
         recipients_list = list(recipients)
 
-    if resend_key:
+    # 1. Option A: Brevo HTTP API (Best for arbitrary recipients/free domains)
+    if brevo_key:
+        print(f"[EMAIL] Using Brevo HTTP API to send to {recipients_list}...")
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "api-key": brevo_key,
+            "Content-Type": "application/json"
+        }
+        
+        sender_email = sender or os.getenv('BREVO_SENDER_EMAIL') or "mentorconnect.project18@gmail.com"
+        sender_name = os.getenv('BREVO_SENDER_NAME') or "MentorConnect Team"
+        
+        payload = {
+            "sender": {"name": sender_name, "email": sender_email},
+            "to": [{"email": r} for r in recipients_list],
+            "subject": subject
+        }
+        if html:
+            payload["htmlContent"] = html
+        elif body:
+            payload["textContent"] = body
+            
+        try:
+            r = requests.post(url, json=payload, headers=headers, timeout=10)
+            if r.status_code in [200, 201, 202]:
+                print(f"[EMAIL] Brevo HTTP email sent successfully to {recipients_list}.")
+                return True
+            else:
+                print(f"[EMAIL] Brevo HTTP API returned error {r.status_code}: {r.text}")
+        except Exception as e:
+            print(f"[EMAIL] Brevo HTTP request failed: {e}")
+
+    # 2. Option B: Resend HTTP API
+    elif resend_key:
         print(f"[EMAIL] Using Resend HTTP API to send to {recipients_list}...")
         # Free Resend tier requires "onboarding@resend.dev" as from address unless domain is verified
         from_email = os.getenv('RESEND_FROM_EMAIL') or "onboarding@resend.dev"
