@@ -10,12 +10,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Enable global CORS to support standard dynamic HTTP request methods
-    CORS(app, resources={r"/api/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }})
+    # Enable global CORS for all routes and blueprints (maximum compatibility)
+    CORS(app)
 
     JWTManager(app)
     mongo.init_app(app)
