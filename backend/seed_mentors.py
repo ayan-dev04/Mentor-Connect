@@ -24,7 +24,7 @@ titles = [
 ]
 expertise_list = ["React", "Node.js", "Python", "Machine Learning", "AWS", "UI/UX", "Product Strategy"]
 
-REAL_EMAIL = "ayanansarisvvv@gmail.com"
+REAL_EMAIL = "mentor.connect1mentors@gmail.com"
 
 mentors = []
 for name in names:
