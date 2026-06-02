@@ -70,6 +70,7 @@ def get_mentors():
         result.append({
             "id": str(m["_id"]),
             "name": m["name"],
+            "email": m.get("email"),
             "title": m.get("title"),
             "company": m.get("company"),
             "expertise": m.get("expertise", "").split(",") if m.get("expertise") else [],
@@ -92,6 +93,7 @@ def get_mentor(mentor_id):
     return jsonify({
         "id": str(mentor["_id"]),
         "name": mentor["name"],
+        "email": mentor.get("email"),
         "title": mentor.get("title"),
         "company": mentor.get("company"),
         "expertise": mentor.get("expertise", "").split(",") if mentor.get("expertise") else [],
