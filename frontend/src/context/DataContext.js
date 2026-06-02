@@ -250,6 +250,70 @@ export const DataProvider = ({ children }) => {
     await refreshMentors();
   };
 
+  const adminCreateUser = async (userData) => {
+    await fetchWithAuth('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+    await refreshStudents();
+    await refreshMentors();
+  };
+
+  const adminUpdateUser = async (userId, userData) => {
+    await fetchWithAuth(`/admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+    await refreshStudents();
+    await refreshMentors();
+  };
+
+  const adminDeleteUser = async (userId) => {
+    await fetchWithAuth(`/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+    await refreshStudents();
+    await refreshMentors();
+    await refreshBookings();
+  };
+
+  const adminAddAvailability = async (mentorId, slot) => {
+    await fetchWithAuth('/admin/availability', {
+      method: 'POST',
+      body: JSON.stringify({ mentor_id: mentorId, slot }),
+    });
+    await refreshMentors();
+  };
+
+  const adminRemoveAvailability = async (slotId) => {
+    await fetchWithAuth(`/admin/availability/${slotId}`, {
+      method: 'DELETE',
+    });
+    await refreshMentors();
+    await refreshBookings();
+  };
+
+  const adminCreateBooking = async (studentId, mentorId, slotId) => {
+    await fetchWithAuth('/admin/bookings', {
+      method: 'POST',
+      body: JSON.stringify({ student_id: studentId, mentor_id: mentorId, slot_id: slotId }),
+    });
+    await refreshBookings();
+    await refreshMentors();
+  };
+
+  const adminDeleteBooking = async (bookingId) => {
+    await fetchWithAuth(`/admin/bookings/${bookingId}`, {
+      method: 'DELETE',
+    });
+    await refreshBookings();
+    await refreshMentors();
+  };
+
+  const adminGetMentorAvailability = async (mentorId) => {
+    return fetchWithAuth(`/admin/mentors/${mentorId}/availability`);
+  };
+
   // ── Context value ──────────────────────────────────────────────────
   const value = {
     students,
@@ -273,6 +337,14 @@ export const DataProvider = ({ children }) => {
     refreshBookings,
     refreshMentors,
     refreshStudents,
+    adminCreateUser,
+    adminUpdateUser,
+    adminDeleteUser,
+    adminAddAvailability,
+    adminRemoveAvailability,
+    adminCreateBooking,
+    adminDeleteBooking,
+    adminGetMentorAvailability,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
